@@ -1,4 +1,4 @@
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, text, select, option)
 main =
   Html.beginnerProgram
     { model = model
@@ -41,21 +41,33 @@ measurementStringify m = pluralize m.qty (unitStringify m.unit)
 -- Model
 
 type alias Model = {
-  initMeasure: Measurement
+  initMeasure: Measurement,
+  unitsTypes : List (Unit, String)
 }
 model : Model
-model = { initMeasure = { unit =  Cup, qty = 1.0 } }
+model = {
+  initMeasure = { unit =  Cup, qty = 1.0 },
+  unitsTypes = [(Tsp, "teaspoon"), (Tbsp, "tablespoon"), (Floz, "fluid ounce"), (Cup, "cup"), (Pt, "pint"), (Qt, "quart"), (Gl, "gallon")]
+  }
 
 -- update
 
-
-update: Int -> Model -> Model
+update : msg -> Model -> Model
 update msg model = model
 
 -- View
 
-view : Model -> Html Int
+unitOption : (Unit, String) -> Html msg
+unitOption pair = option [] [text (Tuple.second pair)]
+
+unitSelector : List (Unit, String) -> Html msg
+unitSelector opts =
+  select [] (List.map unitOption opts)
+
+
+view : Model -> Html msg
 view model =
   div []
-    [ text ("Starting with " ++ (measurementStringify model.initMeasure) )
+    [ text ("Starting with " ++ (measurementStringify model.initMeasure) ),
+    unitSelector model.unitsTypes
     ]
