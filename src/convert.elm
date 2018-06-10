@@ -1,4 +1,7 @@
-import Html exposing (Html, div, text, select, option)
+import Html exposing (Html, div, text, input, select, option)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onInput)
+
 main =
   Html.beginnerProgram
     { model = model
@@ -19,10 +22,11 @@ qt2pt n = n * 2
 gl2qt n = n * 4
 
 -- Data structures
-type Unit = Tsp | Tbsp | Floz | Cup | Pt | Qt | Gl
+type Unit = X | Tsp | Tbsp | Floz | Cup | Pt | Qt | Gl
 unitStringify: Unit -> String
 unitStringify u =
   case u of
+    X -> " "
     Tsp -> "teaspoon"
     Tbsp -> "tablespoon"
     Floz -> "fluid ounce"
@@ -30,6 +34,18 @@ unitStringify u =
     Pt -> "pint"
     Qt -> "quart"
     Gl -> "gallon"
+
+readUnitFromString : String -> Unit
+readUnitFromString str =
+  case str of
+    "teaspoon" -> Tsp
+    "tablespoon" -> Tbsp
+    "fluid ounce" -> Floz
+    "cup" -> Cup
+    "pint" -> Pt
+    "quart" -> Qt
+    "gallon" -> Gl
+    _ -> X
 
 type alias Measurement = {
   unit : Unit,
@@ -41,33 +57,46 @@ measurementStringify m = pluralize m.qty (unitStringify m.unit)
 -- Model
 
 type alias Model = {
-  initMeasure: Measurement,
-  unitsTypes : List (Unit, String)
+  initUnit: Unit,
+  initQty: Float,
+  unitsTypes : List (String)
 }
 model : Model
 model = {
-  initMeasure = { unit =  Cup, qty = 1.0 },
-  unitsTypes = [(Tsp, "teaspoon"), (Tbsp, "tablespoon"), (Floz, "fluid ounce"), (Cup, "cup"), (Pt, "pint"), (Qt, "quart"), (Gl, "gallon")]
+  initUnit = Cup,
+  initQty = 1.0,
+  unitsTypes = (List.map unitStringify [X, Tsp, Tbsp, Floz, Cup, Pt, Qt, Gl])
   }
 
 -- update
 
-update : msg -> Model -> Model
-update msg model = model
+type Msg = UpdateUnit String | UpdateQty String
+
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
+    UpdateQty value ->
+      { model | initQty = Result.withDefault 0 (String.toFloat value) }
+    UpdateUnit value ->
+      { model | initUnit = (readUnitFromString value) }
 
 -- View
 
-unitOption : (Unit, String) -> Html msg
-unitOption pair = option [] [text (Tuple.second pair)]
+unitOption : (String) -> Html Msg
+unitOption unit = option [ value unit ] [ text unit ]
 
-unitSelector : List (Unit, String) -> Html msg
+unitSelector : List (String) -> Html Msg
 unitSelector opts =
-  select [] (List.map unitOption opts)
+  select [ onInput UpdateUnit] (List.map unitOption opts)
 
 
-view : Model -> Html msg
+view : Model -> Html Msg
 view model =
   div []
-    [ text ("Starting with " ++ (measurementStringify model.initMeasure) ),
+    [
+    input [
+      value (toString model.initQty),
+      onInput UpdateQty
+    ] [],
     unitSelector model.unitsTypes
     ]
