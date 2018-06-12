@@ -1,7 +1,13 @@
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, text, button)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
+
+import Array exposing (Array, fromList, slice, append)
 
 import Cards exposing (Card, createDeck)
+import Random
+
+fullDeckGenerator = Random.int 0 108
 
 -- Model
 
@@ -15,10 +21,29 @@ model = {
 
 -- Update
 
-type Msg = Start | Shuffle
+-- randomNDeck = Random.step fullDeckGenerator model.seed0
+
+sliceDeck2: Array (Card) -> Int -> Int -> Array (Card) -> Array (Card)
+sliceDeck2 cards i j topHalf = append (slice i j cards) (append topHalf (slice j 108 cards))
+
+sliceDeck1: Array (Card) -> Int -> Array (Card)
+sliceDeck1 cards i =  sliceDeck2 cards i 80 (slice 0 i cards)
+
+shuffleIteration: Array (Card) -> Int -> Array (Card)
+shuffleIteration cards it =
+  if it == 0 then cards else shuffleIteration (sliceDeck1 cards 36) (it - 1)
+
+shuffle: List (Card) -> List (Card)
+shuffle cards = Array.toList (shuffleIteration (Array.fromList cards) 1)
+
+
+type Msg = Start | Shuffle | RGen (Int, Random.Seed)
 
 update : Msg -> Model -> Model
-update msg model = model
+update msg model =
+  case msg of
+    Shuffle -> { model | deck = shuffle model.deck }
+    _ -> model
 
 -- View
 
@@ -27,7 +52,8 @@ drawCard card = div [ style [("display", "inline-block"), ("width", "50px"), ("h
 
 view : Model -> Html Msg
 view model = div [] [
-    div [class "cards-list"] (List.map drawCard model.deck)
+    button [onClick Shuffle] [ text "Shuffle" ],
+    div [] (List.map drawCard model.deck)
   ]
 
 

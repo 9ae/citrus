@@ -1,4 +1,10 @@
-module Models exposing (Unit(..), unitStringify, readUnitFromString)
+module Models exposing (
+  Unit(..),
+  unitStringify,
+  readUnitFromString
+  )
+
+import Tuple exposing (first, second)
 
 pluralize: Float -> String -> String
 pluralize n str =
@@ -35,6 +41,17 @@ readUnitFromString str =
     "quart" -> Qt
     "gallon" -> Gl
     _ -> X
+
+convertDown : (Float, Unit) -> (Float, Unit)
+convertDown m =
+  case second m of
+    Tbsp -> ((tbsp2tsp (first m)), Tsp)
+    Floz -> ((floz2tbsp (first m)), Tbsp)
+    Cup -> ((cup2floz (first m)), Floz)
+    Pt -> ((pt2cup (first m)), Cup)
+    Qt -> ((qt2pt (first m)), Pt)
+    Gl -> ((gl2qt (first m)), Qt)
+    _ -> (0, X)
 
 type alias Measurement = {
   unit : Unit,
