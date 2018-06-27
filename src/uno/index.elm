@@ -14,10 +14,10 @@ fullDeckGenerator = Random.int 0 108
 type alias Model = {
   deck: List (Card)
 }
-model : Model
-model = {
-    deck = createDeck
-  }
+
+init : (Model, Cmd Msg)
+init =
+  ((Model createDeck), Cmd.none)
 
 -- Update
 
@@ -27,23 +27,32 @@ sliceDeck2: Array (Card) -> Int -> Int -> Array (Card) -> Array (Card)
 sliceDeck2 cards i j topHalf = append (slice i j cards) (append topHalf (slice j 108 cards))
 
 sliceDeck1: Array (Card) -> Int -> Array (Card)
-sliceDeck1 cards i =  sliceDeck2 cards i 80 (slice 0 i cards)
+sliceDeck1 cards i =  sliceDeck2 cards i (i//2) (slice 0 i cards)
 
-shuffleIteration: Array (Card) -> Int -> Array (Card)
-shuffleIteration cards it =
-  if it == 0 then cards else shuffleIteration (sliceDeck1 cards 36) (it - 1)
+shuffleIteration: Array (Card) -> Int -> Int -> Array (Card)
+shuffleIteration cards it r =
+  if it == 0 then cards else shuffleIteration (sliceDeck1 cards r) (it - 1) r
 
-shuffle: List (Card) -> List (Card)
-shuffle cards = Array.toList (shuffleIteration (Array.fromList cards) 1)
+shuffle: List (Card) -> Int -> List (Card)
+shuffle cards r = Array.toList (shuffleIteration (Array.fromList cards) 1 r)
 
 
-type Msg = Start | Shuffle | RGen (Int, Random.Seed)
+type Msg = Start | Shuffle | Chaos Int
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Shuffle -> { model | deck = shuffle model.deck }
-    _ -> model
+    Shuffle -> (model, Random.generate Chaos (Random.int 0 108))
+    Chaos r -> ({ model | deck = shuffle model.deck r}, Cmd.none)
+    _ -> (model, Cmd.none)
+
+
+-- subscriptions
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
+
 
 -- View
 
@@ -58,8 +67,10 @@ view model = div [] [
 
 
 main =
-  Html.beginnerProgram
-    { model = model
-    , view = view,
-    update = update
+  Html.program
+    {
+    init = init,
+    view = view,
+    update = update,
+    subscriptions = subscriptions
     }
