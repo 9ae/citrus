@@ -12,38 +12,50 @@ fullDeckGenerator = Random.int 0 108
 -- Model
 
 type alias Model = {
-  deck: List (Card)
+  deck: List (Card),
+  seed: Random.Seed
 }
 
 init : (Model, Cmd Msg)
 init =
-  ((Model createDeck), Cmd.none)
+  ((Model createDeck (Random.initialSeed 1982211)), Cmd.none)
 
 -- Update
 
 -- randomNDeck = Random.step fullDeckGenerator model.seed0
 
-sliceDeck2: Array (Card) -> Int -> Int -> Array (Card) -> Array (Card)
-sliceDeck2 cards i j topHalf = append (slice i j cards) (append topHalf (slice j 108 cards))
+shake: Random.Seed -> Int -> Int -> (Int, Random.Seed)
+shake seed i j = Random.step (Random.int i j) seed
 
-sliceDeck1: Array (Card) -> Int -> Array (Card)
-sliceDeck1 cards i =  sliceDeck2 cards i (i//2) (slice 0 i cards)
+-- sliceDeck2: Array (Card) -> Int -> Int -> Array (Card) -> Array (Card)
+-- sliceDeck2 cards i j topHalf = append (slice i j cards) (append topHalf (slice j 108 cards))
+--
+-- sliceDeck1: Array (Card) -> Int -> Array (Card)
+-- sliceDeck1 cards i =  sliceDeck2 cards i (i//2) (slice 0 i cards)
+--
+-- shuffleIteration: Array (Card) -> Int -> Int -> Array (Card)
+-- shuffleIteration cards it seed =
+--   if it == 0 then cards else shuffleIteration (sliceDeck1 cards (shake 0 108 seed).first) (it - 1) (shake 0 108 seed).second
 
-shuffleIteration: Array (Card) -> Int -> Int -> Array (Card)
-shuffleIteration cards it r =
-  if it == 0 then cards else shuffleIteration (sliceDeck1 cards r) (it - 1) r
+newDeck: Array (Card) -> Int -> Array (Card)
+newDeck cards r = append (slice r 108 cards) (slice 0 r cards)
 
-shuffle: List (Card) -> Int -> List (Card)
-shuffle cards r = Array.toList (shuffleIteration (Array.fromList cards) 1 r)
+cutDeck: Array (Card) -> Int -> (Int, Random.Seed) -> Array (Card)
+cutDeck cards it rs =
+  case it of
+    0 -> cards
+    _ -> cutDeck (newDeck cards (Tuple.first rs)) (it - 1) (shake (Tuple.second rs) 0 107)
+
+shuffle: List (Card) -> Random.Seed -> List (Card)
+shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 9821 (shake seed 0 107))
 
 
-type Msg = Start | Shuffle | Chaos Int
+type Msg = Start | Shuffle
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Shuffle -> (model, Random.generate Chaos (Random.int 0 108))
-    Chaos r -> ({ model | deck = shuffle model.deck r}, Cmd.none)
+    Shuffle -> ({ model | deck = shuffle model.deck model.seed}, Cmd.none)
     _ -> (model, Cmd.none)
 
 
