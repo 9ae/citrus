@@ -3,6 +3,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 
 import Array exposing (Array, fromList, slice, append, isEmpty, get, length)
+import Tuple exposing (first, second)
 
 import Cards exposing (Card, createDeck)
 import Random
@@ -11,29 +12,19 @@ import Random
 
 type alias Model = {
   deck: List (Card),
-  seed: Random.Seed
+  seed: Random.Seed,
+  p1: List (Card),
+  p2: List (Card)
 }
 
 init : (Model, Cmd Msg)
 init =
-  ((Model createDeck (Random.initialSeed 1982211)), Cmd.none)
+  ((Model createDeck (Random.initialSeed 1982211) [] []), Cmd.none)
 
 -- Update
 
--- randomNDeck = Random.step fullDeckGenerator model.seed0
-
 shake: Random.Seed -> Int -> Int -> (Int, Random.Seed)
 shake seed i j = Random.step (Random.int i j) seed
-
--- sliceDeck2: Array (Card) -> Int -> Int -> Array (Card) -> Array (Card)
--- sliceDeck2 cards i j topHalf = append (slice i j cards) (append topHalf (slice j 108 cards))
---
--- sliceDeck1: Array (Card) -> Int -> Array (Card)
--- sliceDeck1 cards i =  sliceDeck2 cards i (i//2) (slice 0 i cards)
---
--- shuffleIteration: Array (Card) -> Int -> Int -> Array (Card)
--- shuffleIteration cards it seed =
---   if it == 0 then cards else shuffleIteration (sliceDeck1 cards (shake 0 108 seed).first) (it - 1) (shake 0 108 seed).second
 
 arrayHead: Array (Card) -> Array (Card)
 arrayHead a = slice 0 1 a
@@ -57,18 +48,26 @@ cutDeck: Array (Card) -> Int -> (Int, Random.Seed) -> Array (Card)
 cutDeck cards it rs =
   case it of
     0 -> cards
-    _ -> cutDeck (newDeck cards (Tuple.first rs)) (it - 1) (shake (Tuple.second rs) 0 107)
+    _ -> cutDeck (newDeck cards (first rs)) (it - 1) (shake (second rs) 1 ((length cards) - 2))
 
 shuffle: List (Card) -> Random.Seed -> List (Card)
-shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 500 (shake seed 0 107))
+shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 500 (shake seed 1 ((List.length cards) - 2)))
 
+-- distro: List (Card) -> Int -> (List (Card), List (Card)) -> (List (Card), List (Card))
+-- distro cards it results =
+--   case it of
+--     0 -> results
+--     _ -> distro (List.drop 2 cards) (it - 1) ((List.head cards) :: (first results), (List.head (List.tail cards)) :: (second results) )
 
-type Msg = Start | Shuffle
+type Msg = Start | Shuffle | Distribute
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Shuffle -> ({ model | deck = shuffle model.deck model.seed}, Cmd.none)
+    Distribute -> ({
+      model | p1 = (List.take 7 model.deck), p2 = (List.take 7 (List.drop 7 model.deck)), deck = (List.drop 14 model.deck)
+    }, Cmd.none)
     _ -> (model, Cmd.none)
 
 
@@ -87,6 +86,9 @@ drawCard card = div [ style [("display", "inline-block"), ("width", "50px"), ("h
 view : Model -> Html Msg
 view model = div [] [
     button [onClick Shuffle] [ text "Shuffle" ],
+    button [onClick Distribute] [ text "Distribute" ],
+    div [ id "p1", style [("border", "1px solid #000")] ] (List.map drawCard model.p1),
+    div [ id "p2", style [("border", "1px solid #000")] ] (List.map drawCard model.p2),
     div [] (List.map drawCard model.deck)
   ]
 
