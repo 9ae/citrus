@@ -2,12 +2,10 @@ import Html exposing (Html, div, text, button)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 
-import Array exposing (Array, fromList, slice, append)
+import Array exposing (Array, fromList, slice, append, isEmpty, get, length)
 
 import Cards exposing (Card, createDeck)
 import Random
-
-fullDeckGenerator = Random.int 0 108
 
 -- Model
 
@@ -37,8 +35,23 @@ shake seed i j = Random.step (Random.int i j) seed
 -- shuffleIteration cards it seed =
 --   if it == 0 then cards else shuffleIteration (sliceDeck1 cards (shake 0 108 seed).first) (it - 1) (shake 0 108 seed).second
 
+arrayHead: Array (Card) -> Array (Card)
+arrayHead a = slice 0 1 a
+
+arrayTail: Array (Card) -> Array (Card)
+arrayTail a = (slice 1 (length a) a)
+
+recombineDeck: Array (Card) -> Array (Card) -> Array (Card) -> Array (Card)
+recombineDeck a b result =
+  if isEmpty a then
+    append result b
+  else if isEmpty b then
+    append result a
+  else
+    recombineDeck (arrayTail a) (arrayTail b) (append result (append (arrayHead a) (arrayHead b)))
+
 newDeck: Array (Card) -> Int -> Array (Card)
-newDeck cards r = append (slice r 108 cards) (slice 0 r cards)
+newDeck cards r = recombineDeck (slice r 108 cards) (slice 0 r cards) (Array.empty)
 
 cutDeck: Array (Card) -> Int -> (Int, Random.Seed) -> Array (Card)
 cutDeck cards it rs =
@@ -47,7 +60,7 @@ cutDeck cards it rs =
     _ -> cutDeck (newDeck cards (Tuple.first rs)) (it - 1) (shake (Tuple.second rs) 0 107)
 
 shuffle: List (Card) -> Random.Seed -> List (Card)
-shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 9821 (shake seed 0 107))
+shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 500 (shake seed 0 107))
 
 
 type Msg = Start | Shuffle
