@@ -14,12 +14,14 @@ type alias Model = {
   deck: List (Card),
   seed: Random.Seed,
   p1: List (Card),
-  p2: List (Card)
+  p2: List (Card),
+  discard: List (Card),
+  playing: String
 }
 
 init : (Model, Cmd Msg)
 init =
-  ((Model createDeck (Random.initialSeed 1982211) [] []), Cmd.none)
+  ((Model createDeck (Random.initialSeed 1982211) [] [] [] "none"), Cmd.none)
 
 -- Update
 
@@ -31,6 +33,12 @@ arrayHead a = slice 0 1 a
 
 arrayTail: Array (Card) -> Array (Card)
 arrayTail a = (slice 1 (length a) a)
+
+castHead: List (Card) -> Card
+castHead l = Maybe.withDefault (Card "wild" "wild") (List.head l)
+
+castTail: List (Card) -> List (Card)
+castTail l = Maybe.withDefault [] (List.tail l)
 
 recombineDeck: Array (Card) -> Array (Card) -> Array (Card) -> Array (Card)
 recombineDeck a b result =
@@ -53,11 +61,18 @@ cutDeck cards it rs =
 shuffle: List (Card) -> Random.Seed -> List (Card)
 shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 500 (shake seed 1 ((List.length cards) - 2)))
 
--- distro: List (Card) -> Int -> (List (Card), List (Card)) -> (List (Card), List (Card))
--- distro cards it results =
---   case it of
---     0 -> results
---     _ -> distro (List.drop 2 cards) (it - 1) ((List.head cards) :: (first results), (List.head (List.tail cards)) :: (second results) )
+distro: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Card))
+distro cards results =
+  if (List.length cards) < 2 then results
+  else distro (List.drop 2 cards) ((castHead cards) :: (first results), (castHead (castTail cards)) :: (second results))
+
+distribute: Model -> (List (Card), List (Card)) -> Model
+distribute model hands = { model |
+  p1 = first hands,
+  p2 = second hands,
+  deck = List.drop 14 model.deck,
+  playing = "p1"
+  }
 
 type Msg = Start | Shuffle | Distribute
 
@@ -65,9 +80,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Shuffle -> ({ model | deck = shuffle model.deck model.seed}, Cmd.none)
-    Distribute -> ({
-      model | p1 = (List.take 7 model.deck), p2 = (List.take 7 (List.drop 7 model.deck)), deck = (List.drop 14 model.deck)
-    }, Cmd.none)
+    Distribute -> ( (distribute model (distro (List.take 14 model.deck) ([], []) )), Cmd.none  )
     _ -> (model, Cmd.none)
 
 
@@ -81,7 +94,7 @@ subscriptions model =
 -- View
 
 drawCard : Card -> Html Msg
-drawCard card = div [ style [("display", "inline-block"), ("width", "50px"), ("height", "50px"), ("text-align", "center"), ("margin", "2px"), ("border-width", "5px"),("border-style", "solid"), ("border-color", if card.color == "wild" then "black" else card.color)] ] [ text card.denom ]
+drawCard card = div [ style [("display", "inline-block"), ("width", "50px"), ("height", "50px"), ("text-align", "center"), ("margin", "2px"), ("border-width", "5px"),("border-style", "solid"), ("border-color", if card.color == "wild" then "black" else card.color)]] [ text card.denom ]
 
 view : Model -> Html Msg
 view model = div [] [
@@ -90,6 +103,7 @@ view model = div [] [
     div [ id "p1", style [("border", "1px solid #000")] ] (List.map drawCard model.p1),
     div [ id "p2", style [("border", "1px solid #000")] ] (List.map drawCard model.p2),
     div [] (List.map drawCard model.deck)
+    -- [ text ("DECK " ++ (toString (List.length model.deck))) ]
   ]
 
 
