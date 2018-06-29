@@ -1,4 +1,8 @@
-module Cards exposing (Card, createDeck)
+module Cards exposing (Card, createDeck, divideDeck)
+
+import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range)
+import Tuple exposing (first, second)
+import Elves exposing (hl, tl)
 
 type alias Card = {
     denom: String,
@@ -7,23 +11,27 @@ type alias Card = {
 
 -- Create Deck
 
-createCard : String -> String -> Card
-createCard d c = { denom = d, color = c }
-
 createPerColor : String -> List (Card)
-createPerColor d = List.map (\c -> createCard d c) ["red", "blue", "yellow", "green"]
+createPerColor d = map (\c -> Card d c) ["red", "blue", "yellow", "green"]
 
 createNCardsPerColor : String -> Int -> List (Card)
-createNCardsPerColor d n = List.concatMap (\c -> List.repeat n (createCard d c)) ["red", "blue", "yellow", "green"]
+createNCardsPerColor d n = concatMap (\c -> repeat n (Card d c)) ["red", "blue", "yellow", "green"]
 
 createNumberCards: List (Card)
-createNumberCards = List.concatMap (\d -> createNCardsPerColor d 2) (List.map (\x -> toString x) (List.range 1 9))
+createNumberCards = concatMap (\d -> createNCardsPerColor d 2) (map (\x -> toString x) (range 1 9))
 
 createActionCards: List (Card)
-createActionCards = List.concatMap (\d -> createNCardsPerColor d 2) ["skip", "rev", "draw2"]
+createActionCards = concatMap (\d -> createNCardsPerColor d 2) ["skip", "rev", "draw2"]
 
 createWildCards: List (Card)
-createWildCards = (List.repeat 4 (createCard "wild" "wild")) ++ (List.repeat 4 (createCard "draw4" "wild"))
+createWildCards = (repeat 4 (Card "wild" "wild")) ++ (repeat 4 (Card "draw4" "wild"))
 
 createDeck: List (Card)
 createDeck = (createPerColor "0") ++ (createNumberCards) ++ (createActionCards) ++ (createWildCards)
+
+-- Other deck fucntions
+
+divideDeck: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Card))
+divideDeck cards results =
+  if (length cards) < 2 then results
+  else divideDeck (drop 2 cards) ((first results) ++ (hl cards), (second results) ++ (hl (tl cards)))

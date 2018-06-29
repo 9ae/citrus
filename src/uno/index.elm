@@ -6,9 +6,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 
-import Cards exposing (Card, createDeck)
+import Cards exposing (Card, createDeck, divideDeck)
 import Randy exposing (shuffle)
-import Elves exposing (hl, tl)
 
 -- Model
 
@@ -27,11 +26,6 @@ init =
 
 -- Update
 
-distro: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Card))
-distro cards results =
-  if (List.length cards) < 2 then results
-  else distro (List.drop 2 cards) ((first results) ++ (hl cards), (hl (tl cards)) ++ (second results))
-
 distribute: Model -> (List (Card), List (Card)) -> Model
 distribute model hands = { model |
   p1 = first hands,
@@ -46,7 +40,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Shuffle -> ({ model | deck = shuffle model.deck model.seed}, Cmd.none)
-    Distribute -> ( (distribute model (distro (List.take 14 model.deck) ([], []) )), Cmd.none  )
+    Distribute -> ( (distribute model (divideDeck (List.take 14 model.deck) ([], []) )), Cmd.none  )
     _ -> (model, Cmd.none)
 
 
