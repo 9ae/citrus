@@ -2,7 +2,7 @@ module Cards exposing (Card, createDeck, divideDeck)
 
 import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range)
 import Tuple exposing (first, second)
-import Elves exposing (hl, tl)
+import Elves exposing (hl, h2l, tl)
 
 type alias Card = {
     denom: String,
@@ -34,4 +34,4 @@ createDeck = (createPerColor "0") ++ (createNumberCards) ++ (createActionCards) 
 divideDeck: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Card))
 divideDeck cards results =
   if (length cards) < 2 then results
-  else divideDeck (drop 2 cards) ((first results) ++ (hl cards), (second results) ++ (hl (tl cards)))
+  else divideDeck (drop 2 cards) ((first results) ++ (hl cards), (second results) ++ (h2l cards))
