@@ -1,12 +1,14 @@
+import List exposing (length, take, drop, isEmpty)
+import Tuple exposing (first, second)
+
 import Html exposing (Html, div, text, button)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
-
-import Array exposing (Array, fromList, slice, append, isEmpty, get, length)
-import Tuple exposing (first, second)
+import Random exposing (Seed)
 
 import Cards exposing (Card, createDeck)
-import Random
+import Randy exposing (shuffle)
+import Elves exposing (hl, tl)
 
 -- Model
 
@@ -25,46 +27,10 @@ init =
 
 -- Update
 
-shake: Random.Seed -> Int -> Int -> (Int, Random.Seed)
-shake seed i j = Random.step (Random.int i j) seed
-
-arrayHead: Array (Card) -> Array (Card)
-arrayHead a = slice 0 1 a
-
-arrayTail: Array (Card) -> Array (Card)
-arrayTail a = (slice 1 (length a) a)
-
-castHead: List (Card) -> Card
-castHead l = Maybe.withDefault (Card "wild" "wild") (List.head l)
-
-castTail: List (Card) -> List (Card)
-castTail l = Maybe.withDefault [] (List.tail l)
-
-recombineDeck: Array (Card) -> Array (Card) -> Array (Card) -> Array (Card)
-recombineDeck a b result =
-  if isEmpty a then
-    append result b
-  else if isEmpty b then
-    append result a
-  else
-    recombineDeck (arrayTail a) (arrayTail b) (append result (append (arrayHead a) (arrayHead b)))
-
-newDeck: Array (Card) -> Int -> Array (Card)
-newDeck cards r = recombineDeck (slice r 108 cards) (slice 0 r cards) (Array.empty)
-
-cutDeck: Array (Card) -> Int -> (Int, Random.Seed) -> Array (Card)
-cutDeck cards it rs =
-  case it of
-    0 -> cards
-    _ -> cutDeck (newDeck cards (first rs)) (it - 1) (shake (second rs) 1 ((length cards) - 2))
-
-shuffle: List (Card) -> Random.Seed -> List (Card)
-shuffle cards seed = Array.toList (cutDeck (Array.fromList cards) 500 (shake seed 1 ((List.length cards) - 2)))
-
 distro: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Card))
 distro cards results =
   if (List.length cards) < 2 then results
-  else distro (List.drop 2 cards) ((castHead cards) :: (first results), (castHead (castTail cards)) :: (second results))
+  else distro (List.drop 2 cards) ((first results) ++ (hl cards), (hl (tl cards)) ++ (second results))
 
 distribute: Model -> (List (Card), List (Card)) -> Model
 distribute model hands = { model |

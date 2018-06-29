@@ -5,6 +5,8 @@ type alias Card = {
     color: String
 }
 
+-- Create Deck
+
 createCard : String -> String -> Card
 createCard d c = { denom = d, color = c }
 
