@@ -6,12 +6,13 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 
-import Cards exposing (Card, createDeck, divideDeck)
+import Cards exposing (Card, createDeck, divideDeck, getFirstNumeric)
 import Randy exposing (shuffle)
+import Elves exposing (nl)
 
--- Model
+-- GameState
 
-type alias Model = {
+type alias GameState = {
   deck: List (Card),
   seed: Random.Seed,
   p1: List (Card),
@@ -20,49 +21,66 @@ type alias Model = {
   playing: String
 }
 
-init : (Model, Cmd Msg)
+init : (GameState, Cmd Msg)
 init =
-  ((Model createDeck (Random.initialSeed 1982211) [] [] [] "none"), Cmd.none)
+  ((GameState createDeck (Random.initialSeed 1982211) [] [] [] "none"), Cmd.none)
 
 -- Update
 
-distribute: Model -> (List (Card), List (Card)) -> Model
-distribute model hands = { model |
+distribute1: GameState -> Int -> (List (Card), List (Card)) -> GameState
+distribute1 model n hands = { model |
   p1 = first hands,
   p2 = second hands,
-  deck = List.drop 14 model.deck,
-  playing = "p1"
+  deck = List.drop n model.deck
   }
 
-type Msg = Start | Shuffle | Distribute
+distribute: GameState -> Int -> GameState
+distribute model n = distribute1 model n (divideDeck (List.take n model.deck) ([], []) )
 
-update : Msg -> Model -> (Model, Cmd Msg)
+drawStarterCard: (Maybe Card, List(Card)) -> GameState -> GameState
+drawStarterCard res model =
+  case (first res) of
+    Just card -> { model |
+      playing = "p1",
+      discard = [card],
+      deck = (second res)
+    }
+    Nothing -> model
+    -- Should handle this error later
+
+startGame: GameState -> GameState
+startGame model = drawStarterCard (getFirstNumeric model.deck) model
+
+type Msg = Start | Shuffle | Draw
+
+update : Msg -> GameState -> (GameState, Cmd Msg)
 update msg model =
   case msg of
     Shuffle -> ({ model | deck = shuffle model.deck model.seed}, Cmd.none)
-    Distribute -> ( (distribute model (divideDeck (List.take 14 model.deck) ([], []) )), Cmd.none  )
+    Start -> ( (startGame (distribute model 14)), Cmd.none  )
     _ -> (model, Cmd.none)
 
 
 -- subscriptions
 
-subscriptions : Model -> Sub Msg
+subscriptions : GameState -> Sub Msg
 subscriptions model =
   Sub.none
 
 
 -- View
 
-drawCard : Card -> Html Msg
-drawCard card = div [ style [("display", "inline-block"), ("width", "50px"), ("height", "50px"), ("text-align", "center"), ("margin", "2px"), ("border-width", "5px"),("border-style", "solid"), ("border-color", if card.color == "wild" then "black" else card.color)]] [ text card.denom ]
+cardView : Card -> Html Msg
+cardView card = div [ style [("display", "inline-block"), ("width", "50px"), ("height", "50px"), ("text-align", "center"), ("margin", "2px"), ("border-width", "5px"),("border-style", "solid"), ("border-color", if card.color == "wild" then "black" else card.color)]] [ text card.denom ]
 
-view : Model -> Html Msg
+view : GameState -> Html Msg
 view model = div [] [
     button [onClick Shuffle] [ text "Shuffle" ],
-    button [onClick Distribute] [ text "Distribute" ],
-    div [ id "p1", style [("border", "1px solid #000")] ] (List.map drawCard model.p1),
-    div [ id "p2", style [("border", "1px solid #000")] ] (List.map drawCard model.p2),
-    div [] (List.map drawCard model.deck)
+    button [onClick Start, disabled (model.playing /= "none")] [ text "Start" ],
+    div [ id "p1", style [("border", "1px solid purple")] ] (List.map cardView model.p1),
+    div [ id "p2", style [("border", "1px solid orange")] ] (List.map cardView model.p2),
+    div [] (List.map cardView model.deck),
+    div [ id "discard", style [("border", "1px solid gray")]] (List.map cardView model.discard)
     -- [ text ("DECK " ++ (toString (List.length model.deck))) ]
   ]
 

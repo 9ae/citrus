@@ -1,8 +1,9 @@
-module Cards exposing (Card, createDeck, divideDeck)
+module Cards exposing (Card, createDeck, divideDeck, getFirstNumeric)
 
-import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range)
+import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range, filterMap, head, tail)
 import Tuple exposing (first, second)
 import Elves exposing (hl, h2l, tl)
+-- import Maybe exposing (Maybe)
 
 type alias Card = {
     denom: String,
@@ -35,3 +36,23 @@ divideDeck: List (Card) -> (List (Card), List (Card)) -> (List (Card), List (Car
 divideDeck cards results =
   if (length cards) < 2 then results
   else divideDeck (drop 2 cards) ((first results) ++ (hl cards), (second results) ++ (h2l cards))
+
+isNumberic: Maybe Card -> Bool
+isNumberic m =
+  case m of
+    Just card -> Result.toMaybe (String.toInt card.denom) /= Nothing
+    Nothing -> False
+
+deckTailAppend: List (Card) -> Maybe Card -> List (Card)
+deckTailAppend deck card =
+  case card of
+    Just card -> (tl deck) ++ [card]
+    Nothing -> tl deck
+
+findFirstNumeric: (Maybe Card, List (Card)) -> (Maybe Card, List (Card))
+findFirstNumeric deck =
+  if isNumberic (first deck) then deck
+  else findFirstNumeric ((head (second deck)), (deckTailAppend (second deck) (first deck)))
+
+getFirstNumeric: List (Card) -> (Maybe Card, List(Card))
+getFirstNumeric deck = findFirstNumeric ((head deck), (tl deck))
