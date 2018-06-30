@@ -5,7 +5,8 @@ module Cards exposing (
     filterActionCards,
     getFirstNumeric,
     moveNCards,
-    validateAdjacentCards
+    validateAdjacentCards,
+    validateFirstCard
   )
 
 import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range, filter, filterMap, head, tail)
@@ -78,6 +79,14 @@ validateDemom prevCard nextCard = prevCard.denom == nextCard.denom
 
 validateAdjacentCards: Maybe Card -> Card -> Bool
 validateAdjacentCards prevCard nextCard =
+  if isAction prevCard then False else
+  case prevCard of
+    Just card ->
+        (validateColors card nextCard) || (validateDemom card nextCard)
+    Nothing -> False
+
+validateFirstCard: Maybe Card -> Card -> Bool
+validateFirstCard prevCard nextCard =
   case prevCard of
     Just card -> (validateColors card nextCard) || (validateDemom card nextCard)
     Nothing -> False

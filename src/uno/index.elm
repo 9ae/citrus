@@ -6,7 +6,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 
-import Cards exposing (Card, createDeck, divideDeck, filterActionCards, getFirstNumeric,    validateAdjacentCards, moveNCards)
+import Cards exposing (Card, createDeck, divideDeck, filterActionCards, getFirstNumeric,    validateAdjacentCards, moveNCards, validateFirstCard)
 import Randy exposing (shuffle)
 import Elves exposing (popn, te)
 
@@ -60,7 +60,7 @@ validatePlayer model player = player == model.playing
 validatePlay: GameState -> Card -> Bool
 validatePlay model card =
   if List.isEmpty model.playerQueue then
-    validateAdjacentCards (te model.discard) card
+    validateFirstCard (te model.discard) card
   else
     validateAdjacentCards (te model.playerQueue) card
 
