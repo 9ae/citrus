@@ -21,12 +21,13 @@ type alias GameState = {
   playing: String,
   message: String,
   playerQueue: List (Card),
-  drawCounter: Int
+  drawCounter: Int,
+  currentColor: String
 }
 
 init : (GameState, Cmd Msg)
 init =
-  ((GameState createDeck (Random.initialSeed 238318) [] [] [] "none" "" [] 0), Cmd.none)
+  ((GameState createDeck (Random.initialSeed 238318) [] [] [] "none" "" [] 0 ""), Cmd.none)
 
 -- Game state methods
 
@@ -46,7 +47,8 @@ drawStarterCard res model =
     Just card -> { model |
       playing = "p1",
       discard = [card],
-      deck = (second res)
+      deck = (second res),
+      currentColor = card.color
     }
     Nothing -> model
     -- Should handle this error later
@@ -97,20 +99,27 @@ applyAction1 card model =
     "draw4" -> { model |
       discard = model.discard ++ [card],
       playerQueue = [],
-      playing = togglePlaying model.playing,
-      drawCounter = model.drawCounter + 4
+      drawCounter = model.drawCounter + 4,
+      currentColor = "wild"
     }
-    _ -> { model |
+    "wild" -> { model |
       discard = model.discard ++ [card],
       playerQueue = [],
-      playing = togglePlaying model.playing
+      currentColor = "wild"
     }
+    _ -> model
 
 applyAction: Maybe Card -> GameState -> GameState
 applyAction mCard model =
   case mCard of
     Just card -> applyAction1 card model
     Nothing -> model
+
+updateColor: Maybe Card -> String -> String
+updateColor mc existingColor =
+  case mc of
+    Just card -> card.color
+    Nothing -> existingColor
 
 playHand: GameState -> GameState
 playHand model =
@@ -120,7 +129,8 @@ playHand model =
     { model |
       discard = model.discard ++ model.playerQueue,
       playerQueue = [],
-      playing = togglePlaying model.playing
+      playing = togglePlaying model.playing,
+      currentColor = updateColor (te model.playerQueue) model.currentColor
     }
 
 reshuffle: GameState -> GameState
@@ -144,7 +154,7 @@ drawNCards n model =
 
 -- Update
 
-type Msg = Start | Shuffle | Play Int Card | PlayHand | Draw Int
+type Msg = Start | Shuffle | Play Int Card | PlayHand | Draw Int | ChangeColor String
 
 update : Msg -> GameState -> (GameState, Cmd Msg)
 update msg model =
@@ -154,6 +164,10 @@ update msg model =
     Play index card -> ((playCard model index card), Cmd.none)
     PlayHand -> ((playHand model), Cmd.none)
     Draw n -> ((drawNCards (if n == 0 then 1 else n) model), Cmd.none)
+    ChangeColor newColor -> ({ model |
+        currentColor = newColor,
+        playing = togglePlaying model.playing
+      }, Cmd.none)
     -- _ -> (model, Cmd.none)
 
 
@@ -178,14 +192,23 @@ playerCardView isTurn index card = button [
 playerHandView: List (Card) -> Bool -> List (Html Msg)
 playerHandView hand isTurn = List.indexedMap (playerCardView isTurn) hand
 
+colorButtonView: String -> Html Msg
+colorButtonView c = button [ onClick (ChangeColor c), style [("background-color", c)] ] [ text c ]
+
+wildColorChangeView: String -> Html Msg
+wildColorChangeView currentColor =
+  div [ style [("display", if currentColor == "wild" then "block" else "none" )] ]
+    (List.map colorButtonView ["red", "blue", "green", "yellow"])
+
 view : GameState -> Html Msg
 view model = div [] [
     button [onClick Shuffle] [ text "Shuffle" ],
     button [onClick Start, disabled (model.playing /= "none")] [ text "Start" ],
     button [onClick PlayHand, disabled (List.isEmpty model.playerQueue)] [ text "Play" ],
-    p [] [ text model.message ],
+    p [ style [("min-height", "20px"), ("background-color", model.currentColor)] ] [ text model.message ],
     p [] [ text ("Active Player: " ++ model.playing) ],
     div [] (List.map cardView model.playerQueue),
+    wildColorChangeView model.currentColor,
     div [ id "p1", style [("border", "4px solid purple")] ]
       (playerHandView model.p1 (validatePlayer model "p1")),
     div [ id "p2", style [("border", "4px solid orange")] ]
