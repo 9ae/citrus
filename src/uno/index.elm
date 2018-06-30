@@ -1,4 +1,4 @@
-import List exposing (length, take, drop, isEmpty)
+import List exposing (length, take, drop, isEmpty, head, tail)
 import Tuple exposing (first, second)
 
 import Html exposing (Html, div, text, button, p)
@@ -6,7 +6,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 
-import Cards exposing (Card, createDeck, divideDeck, filterActionCards, getFirstNumeric,    validateAdjacentCards, moveNCards, validateFirstCard)
+import Cards exposing (Card, createDeck, divideDeck, filterActionCards, getFirstNumeric,    validateAdjacentCards, moveNCards, validateFirstCard, Action, parseAction, isAction)
 import Randy exposing (shuffle)
 import Elves exposing (popn, te)
 
@@ -21,12 +21,12 @@ type alias GameState = {
   playing: String,
   message: String,
   playerQueue: List (Card),
-  actionQueue: List (Card)
+  drawCounter: Int
 }
 
 init : (GameState, Cmd Msg)
 init =
-  ((GameState createDeck (Random.initialSeed 1982211) [] [] [] "none" "" [] []), Cmd.none)
+  ((GameState createDeck (Random.initialSeed 238318) [] [] [] "none" "" [] 0), Cmd.none)
 
 -- Game state methods
 
@@ -77,19 +77,58 @@ playCard model index card = if validatePlay model card then applyPlay model inde
 togglePlaying: String -> String
 togglePlaying playing = if playing == "p1" then "p2" else "p1"
 
+applyAction1: Card -> GameState -> GameState
+applyAction1 card model =
+  case card.denom of
+    "skip" -> { model |
+      discard = model.discard ++ [card],
+      playerQueue = []
+    }
+    "rev" -> { model |
+      discard = model.discard ++ [card],
+      playerQueue = []
+    }
+    "draw2" -> { model |
+      discard = model.discard ++ [card],
+      playerQueue = [],
+      playing = togglePlaying model.playing,
+      drawCounter = model.drawCounter + 2
+    }
+    "draw4" -> { model |
+      discard = model.discard ++ [card],
+      playerQueue = [],
+      playing = togglePlaying model.playing,
+      drawCounter = model.drawCounter + 4
+    }
+    _ -> { model |
+      discard = model.discard ++ [card],
+      playerQueue = [],
+      playing = togglePlaying model.playing
+    }
+
+applyAction: Maybe Card -> GameState -> GameState
+applyAction mCard model =
+  case mCard of
+    Just card -> applyAction1 card model
+    Nothing -> model
+
 playHand: GameState -> GameState
-playHand model = { model |
-    discard = model.discard ++ model.playerQueue,
-    playerQueue = [],
-    playing = togglePlaying model.playing,
-    actionQueue = model.actionQueue ++ (filterActionCards model.playerQueue)
-  }
+playHand model =
+  if (List.length model.playerQueue) == 1 && isAction (head model.playerQueue) then
+    applyAction (head model.playerQueue) model
+  else
+    { model |
+      discard = model.discard ++ model.playerQueue,
+      playerQueue = [],
+      playing = togglePlaying model.playing
+    }
 
 drawNCards: Int -> GameState -> GameState
 drawNCards n model = { model |
     p1 = if model.playing == "p1" then (moveNCards n model.deck model.p1) else model.p1,
     p2 = if model.playing == "p2" then (moveNCards n model.deck model.p2) else model.p2,
-    deck = List.drop n model.deck
+    deck = List.drop n model.deck,
+    drawCounter = 0
   }
 
 -- Update
@@ -103,7 +142,7 @@ update msg model =
     Start -> ( (startGame (distribute model 14)), Cmd.none  )
     Play index card -> ((playCard model index card), Cmd.none)
     PlayHand -> ((playHand model), Cmd.none)
-    Draw n -> ((drawNCards n model), Cmd.none)
+    Draw n -> ((drawNCards (if n == 0 then 1 else n) model), Cmd.none)
     -- _ -> (model, Cmd.none)
 
 
@@ -136,12 +175,11 @@ view model = div [] [
     p [] [ text model.message ],
     p [] [ text ("Active Player: " ++ model.playing) ],
     div [] (List.map cardView model.playerQueue),
-    div [ style [("border", "1px solid red")] ] (List.map cardView model.actionQueue),
     div [ id "p1", style [("border", "1px solid purple")] ]
       (playerHandView model.p1 (validatePlayer model "p1")),
     div [ id "p2", style [("border", "1px solid orange")] ]
       (playerHandView model.p2 (validatePlayer model "p2")),
-    button [onClick (Draw 1)] [ text "Draw" ],
+    button [onClick (Draw model.drawCounter)] [ text "Draw" ],
     div [] (List.map cardView model.deck),
     div [ id "discard", style [("border", "1px solid gray")]] (List.map cardView model.discard)
     -- [ text ("DECK " ++ (toString (List.length model.deck))) ]

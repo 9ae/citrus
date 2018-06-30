@@ -1,10 +1,13 @@
 module Cards exposing (
+    Action,
     Card,
     createDeck,
     divideDeck,
     filterActionCards,
     getFirstNumeric,
+    isAction,
     moveNCards,
+    parseAction,
     validateAdjacentCards,
     validateFirstCard
   )
@@ -18,6 +21,8 @@ type alias Card = {
     denom: String,
     color: String
 }
+
+type Action = WILD | SKIP | REV | DRAW2 | DRAW4
 
 -- Create Deck
 
@@ -54,6 +59,15 @@ isNumberic m =
 
 isAction: Maybe Card -> Bool
 isAction m = not (isNumberic m)
+
+parseAction: String -> Action
+parseAction denom =
+  case denom of
+    "skip" -> SKIP
+    "rev" -> REV
+    "draw2" -> DRAW2
+    "draw4" -> DRAW4
+    _ -> WILD
 
 deckTailAppend: List (Card) -> Maybe Card -> List (Card)
 deckTailAppend deck card =
