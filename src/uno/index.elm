@@ -6,7 +6,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 
-import Cards exposing (Card, createDeck, divideDeck, getFirstNumeric, validateAdjacentCards, moveNCards)
+import Cards exposing (Card, createDeck, divideDeck, filterActionCards, getFirstNumeric,    validateAdjacentCards, moveNCards)
 import Randy exposing (shuffle)
 import Elves exposing (popn, te)
 
@@ -20,12 +20,13 @@ type alias GameState = {
   discard: List (Card),
   playing: String,
   message: String,
-  playerQueue: List (Card)
+  playerQueue: List (Card),
+  actionQueue: List (Card)
 }
 
 init : (GameState, Cmd Msg)
 init =
-  ((GameState createDeck (Random.initialSeed 1982211) [] [] [] "none" "" []), Cmd.none)
+  ((GameState createDeck (Random.initialSeed 1982211) [] [] [] "none" "" [] []), Cmd.none)
 
 -- Game state methods
 
@@ -80,7 +81,8 @@ playHand: GameState -> GameState
 playHand model = { model |
     discard = model.discard ++ model.playerQueue,
     playerQueue = [],
-    playing = togglePlaying model.playing
+    playing = togglePlaying model.playing,
+    actionQueue = model.actionQueue ++ (filterActionCards model.playerQueue)
   }
 
 drawNCards: Int -> GameState -> GameState
@@ -134,6 +136,7 @@ view model = div [] [
     p [] [ text model.message ],
     p [] [ text ("Active Player: " ++ model.playing) ],
     div [] (List.map cardView model.playerQueue),
+    div [ style [("border", "1px solid red")] ] (List.map cardView model.actionQueue),
     div [ id "p1", style [("border", "1px solid purple")] ]
       (playerHandView model.p1 (validatePlayer model "p1")),
     div [ id "p2", style [("border", "1px solid orange")] ]

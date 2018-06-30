@@ -1,6 +1,14 @@
-module Cards exposing (Card, createDeck, divideDeck, getFirstNumeric, validateAdjacentCards, moveNCards)
+module Cards exposing (
+    Card,
+    createDeck,
+    divideDeck,
+    filterActionCards,
+    getFirstNumeric,
+    moveNCards,
+    validateAdjacentCards
+  )
 
-import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range, filterMap, head, tail)
+import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range, filter, filterMap, head, tail)
 import Tuple exposing (first, second)
 import Elves exposing (hl, h2l, tl)
 -- import Maybe exposing (Maybe)
@@ -43,6 +51,9 @@ isNumberic m =
     Just card -> Result.toMaybe (String.toInt card.denom) /= Nothing
     Nothing -> False
 
+isAction: Maybe Card -> Bool
+isAction m = not (isNumberic m)
+
 deckTailAppend: List (Card) -> Maybe Card -> List (Card)
 deckTailAppend deck card =
   case card of
@@ -73,3 +84,6 @@ validateAdjacentCards prevCard nextCard =
 
 moveNCards: Int -> List (Card) -> List (Card) -> List (Card)
 moveNCards n deck hand = hand ++ (take n deck)
+
+filterActionCards: List (Card) -> List (Card)
+filterActionCards cards = filter (\c -> not (isNumberic (Just c))) cards
