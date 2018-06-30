@@ -1,4 +1,4 @@
-import List exposing (length, take, drop, isEmpty, head, tail)
+import List exposing (take, drop, head, tail)
 import Tuple exposing (first, second)
 
 import Html exposing (Html, div, text, button, p)
@@ -123,13 +123,24 @@ playHand model =
       playing = togglePlaying model.playing
     }
 
-drawNCards: Int -> GameState -> GameState
-drawNCards n model = { model |
-    p1 = if model.playing == "p1" then (moveNCards n model.deck model.p1) else model.p1,
-    p2 = if model.playing == "p2" then (moveNCards n model.deck model.p2) else model.p2,
-    deck = List.drop n model.deck,
-    drawCounter = 0
+reshuffle: GameState -> GameState
+reshuffle model =
+  let inverse = (List.reverse model.discard)
+  in { model |
+    deck = shuffle (model.deck ++ (drop 1 inverse)) model.seed,
+    discard = (take 1 inverse)
   }
+
+drawNCards: Int -> GameState -> GameState
+drawNCards n model =
+  if (List.length model.deck) < n then drawNCards n (reshuffle model)
+  else
+    { model |
+      p1 = if model.playing == "p1" then (moveNCards n model.deck model.p1) else model.p1,
+      p2 = if model.playing == "p2" then (moveNCards n model.deck model.p2) else model.p2,
+      deck = List.drop n model.deck,
+      drawCounter = 0
+    }
 
 -- Update
 
@@ -175,13 +186,14 @@ view model = div [] [
     p [] [ text model.message ],
     p [] [ text ("Active Player: " ++ model.playing) ],
     div [] (List.map cardView model.playerQueue),
-    div [ id "p1", style [("border", "1px solid purple")] ]
+    div [ id "p1", style [("border", "4px solid purple")] ]
       (playerHandView model.p1 (validatePlayer model "p1")),
-    div [ id "p2", style [("border", "1px solid orange")] ]
+    div [ id "p2", style [("border", "4px solid orange")] ]
       (playerHandView model.p2 (validatePlayer model "p2")),
     button [onClick (Draw model.drawCounter)] [ text "Draw" ],
-    div [] (List.map cardView model.deck),
-    div [ id "discard", style [("border", "1px solid gray")]] (List.map cardView model.discard)
+    div [ id "discard", style [("border", "1px solid gray")]] (List.map cardView (List.reverse model.discard)),
+    div [] (List.map cardView model.deck)
+
     -- [ text ("DECK " ++ (toString (List.length model.deck))) ]
   ]
 
