@@ -1,4 +1,4 @@
-module Cards exposing (Card, createDeck, divideDeck, getFirstNumeric)
+module Cards exposing (Card, createDeck, divideDeck, getFirstNumeric, validateAdjacentCards, moveNCards)
 
 import List exposing (length, take, drop, isEmpty, repeat, concatMap, map, repeat, range, filterMap, head, tail)
 import Tuple exposing (first, second)
@@ -56,3 +56,20 @@ findFirstNumeric deck =
 
 getFirstNumeric: List (Card) -> (Maybe Card, List(Card))
 getFirstNumeric deck = findFirstNumeric ((head deck), (tl deck))
+
+validateColors: Card -> Card -> Bool
+validateColors prevCard nextCard =
+  if nextCard.color == "wild" || prevCard.color == "wild" then True
+  else prevCard.color == nextCard.color
+
+validateDemom: Card -> Card -> Bool
+validateDemom prevCard nextCard = prevCard.denom == nextCard.denom
+
+validateAdjacentCards: Maybe Card -> Card -> Bool
+validateAdjacentCards prevCard nextCard =
+  case prevCard of
+    Just card -> (validateColors card nextCard) || (validateDemom card nextCard)
+    Nothing -> False
+
+moveNCards: Int -> List (Card) -> List (Card) -> List (Card)
+moveNCards n deck hand = hand ++ (take n deck)
